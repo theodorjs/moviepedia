@@ -50,7 +50,10 @@ at <https://www.omdbapi.com/apikey.aspx>.
 
 ## Deployment
 
-See [DEPLOY.md](DEPLOY.md) for Vercel, Netlify, and GitHub Pages instructions.
+Live at **https://theodorjs.github.io/moviepedia/**, deployed automatically to
+GitHub Pages on every push to `main` via
+[.github/workflows/deploy.yml](.github/workflows/deploy.yml). See
+[DEPLOY.md](DEPLOY.md) for details.
 
 ---
 

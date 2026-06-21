@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Movie, TvShow, getPosterUrl } from '@/services/tmdbService';
+import { fetchImdbRatingForMedia, isOmdbConfigured } from '@/services/omdbService';
 import { Star, Info } from 'lucide-react';
 
 interface MediaCardProps {
@@ -12,7 +13,25 @@ const MediaCard: React.FC<MediaCardProps> = ({ item, onSelect }) => {
   const title = isMovie ? (item as Movie).title : (item as TvShow).name;
   const date = isMovie ? (item as Movie).release_date : (item as TvShow).first_air_date;
   const year = date ? new Date(date).getFullYear() : null;
-  const rating = item.vote_average ? item.vote_average.toFixed(1) : null;
+
+  // Prefer the IMDb rating (via OMDb); fall back to the TMDb score if IMDb is
+  // unavailable (no key, no match, or OMDb quota reached). Same star + styling.
+  const tmdbRating = item.vote_average ? item.vote_average.toFixed(1) : null;
+  const [imdbRating, setImdbRating] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOmdbConfigured()) return;
+    let active = true;
+    fetchImdbRatingForMedia(isMovie ? 'movie' : 'tv', item.id).then((r) => {
+      if (active && r) setImdbRating(r);
+    });
+    return () => {
+      active = false;
+    };
+  }, [item.id, isMovie]);
+
+  const rating = imdbRating ?? tmdbRating;
+  const ratingTitle = imdbRating ? 'IMDb rating' : 'TMDb rating';
 
   const open = () => onSelect(item);
 
@@ -42,7 +61,10 @@ const MediaCard: React.FC<MediaCardProps> = ({ item, onSelect }) => {
         />
 
         {rating && (
-          <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/70 px-2 py-0.5 text-xs font-semibold text-amber-300 backdrop-blur-sm">
+          <div
+            title={ratingTitle}
+            className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/70 px-2 py-0.5 text-xs font-semibold text-amber-300 backdrop-blur-sm"
+          >
             <Star className="h-3 w-3 fill-amber-300" />
             {rating}
           </div>

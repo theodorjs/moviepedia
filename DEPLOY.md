@@ -1,46 +1,38 @@
 # Deploying Moviepedia
 
-This is a static Vite + React single-page app. `npm run build` produces a
-`dist/` folder of static files you can host anywhere.
+The site deploys automatically to **GitHub Pages** on every push to `main`, via
+[.github/workflows/deploy.yml](.github/workflows/deploy.yml).
 
-## Required environment variables
+**Live URL:** https://theodorjs.github.io/moviepedia/
 
-Set these in your host's dashboard (they are read at build time, so they must
-exist **before** the build runs). The same names are listed in `.env.example`.
+## How it works
 
-| Variable | Required | Notes |
-| --- | --- | --- |
-| `VITE_TMDB_API_KEY` | yes | TMDb API key |
-| `VITE_TMDB_READ_ACCESS_TOKEN` | optional | TMDb v4 read token |
-| `VITE_OMDB_API_KEY` | optional | Enables IMDb / Rotten Tomatoes / Metacritic ratings |
+- `vite.config.ts` sets `base: '/moviepedia/'` for production builds so asset
+  paths resolve under the project subpath on GitHub Pages.
+- The workflow installs dependencies with pnpm, runs `pnpm build`, and publishes
+  the `dist/` folder to GitHub Pages.
+- The TMDb/OMDb keys live in the committed `.env`. Because this is a client-side
+  app, those keys are bundled into the public JavaScript regardless — committing
+  them is exactly what makes the site work for every visitor with no extra setup.
 
-> Note: because this is a client-side app, `VITE_*` values are bundled into the
-> public JavaScript. TMDb/OMDb keys used this way are visible to anyone — that's
-> expected for these APIs, but don't reuse a key you consider secret.
+## First-time setup
 
-## Option A — Vercel (recommended, zero config)
+1. Push this repo to `https://github.com/theodorjs/moviepedia`.
+2. Repo → Settings → Pages → "Build and deployment" → Source = **GitHub Actions**.
+   (The workflow's `configure-pages` step also enables this automatically on the
+   first run.)
+3. The first push triggers the workflow; the site goes live in ~1–2 minutes.
+   Watch progress under the repo's **Actions** tab.
 
-1. Push the repo to GitHub.
-2. On vercel.com → "Add New Project" → import the repo.
-3. Vercel auto-detects Vite (`vercel.json` is included). Add the env vars above.
-4. Deploy. Every push to the main branch redeploys automatically.
+## A note on OMDb quota
 
-## Option B — Netlify
+IMDb / Rotten Tomatoes / Metacritic ratings come from OMDb's free tier (1000
+requests/day, shared across all visitors). The app caches results (memory +
+`localStorage`) and falls back to the TMDb score when the quota is reached, so a
+rating is always shown. For a public site with real traffic, consider OMDb's
+$1/month tier (100,000/day): https://www.omdbapi.com/apikey.aspx
 
-1. Push the repo to GitHub.
-2. On netlify.com → "Add new site" → import the repo.
-3. Build settings come from `netlify.toml` (build `npm run build`, publish `dist`).
-4. Add the env vars above under Site settings → Environment variables. Deploy.
+## Hosting elsewhere
 
-## Option C — GitHub Pages
-
-GitHub Pages serves a project repo from a subpath (`/<repo-name>/`), so:
-
-1. In `vite.config.ts` add `base: '/<your-repo-name>/'`.
-2. Add a GitHub Actions workflow that runs `npm ci && npm run build` and
-   publishes `dist/` (e.g. with `actions/deploy-pages`). Set the env vars as
-   repository secrets/variables.
-3. Enable Pages (Settings → Pages → Source: GitHub Actions).
-
-Vercel or Netlify are simpler because they serve from the domain root and need
-no `base` change.
+`npm run build` produces static files in `dist/` that any static host can serve.
+If you move off GitHub Pages, change `base` back to `'/'` in `vite.config.ts`.

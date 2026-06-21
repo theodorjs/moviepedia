@@ -6,8 +6,8 @@ dist/
 dist-ssr/
 *.local
 
-# Local environment files (real secrets stay out of git; see .env.example)
-.env
+# Local environment overrides. NOTE: the committed .env holds the public,
+# client-side TMDb/OMDb keys so the deployed site works for every visitor.
 .env.local
 .env.*.local
 

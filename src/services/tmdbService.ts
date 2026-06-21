@@ -218,6 +218,40 @@ export const fetchTvShowDetails = async (tvShowId: number): Promise<any | null> 
   return fetchMediaDetails('tv', tvShowId);
 };
 
+// IMDb id lookup, used to fetch external (IMDb/RT) ratings. Cached in memory and
+// localStorage since a title's external ids essentially never change.
+const imdbIdMemCache = new Map<string, string | null>();
+
+export const fetchImdbId = async (
+  mediaType: MediaType,
+  id: number,
+): Promise<string | null> => {
+  const key = `${mediaType}:${id}`;
+  if (imdbIdMemCache.has(key)) return imdbIdMemCache.get(key) ?? null;
+
+  const lsKey = `mp:imdbid:${key}`;
+  try {
+    const cached = localStorage.getItem(lsKey);
+    if (cached !== null) {
+      const value = cached === '' ? null : cached;
+      imdbIdMemCache.set(key, value);
+      return value;
+    }
+  } catch {
+    /* localStorage unavailable — fall through to network */
+  }
+
+  const data = await get<{ imdb_id?: string }>(`/${mediaType}/${id}/external_ids`);
+  const imdbId = data?.imdb_id || null;
+  imdbIdMemCache.set(key, imdbId);
+  try {
+    localStorage.setItem(lsKey, imdbId ?? '');
+  } catch {
+    /* ignore */
+  }
+  return imdbId;
+};
+
 /* -------------------------------------------------------------------------- */
 /*  Discover                                                                   */
 /* -------------------------------------------------------------------------- */
