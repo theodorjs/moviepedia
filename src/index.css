@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 10%; /* #1A1A1A */
+    --foreground: 0 0% 87.8%; /* #E0E0E0 */
+
+    --card: 0 0% 17.3%; /* #2C2C2C */
+    --card-foreground: 0 0% 87.8%; /* #E0E0E0 */
+ 
+    --popover: 0 0% 17.3%; /* #2C2C2C */
+    --popover-foreground: 0 0% 87.8%; /* #E0E0E0 */
+ 
+    --primary: 202 100% 46.9%; /* #00AEEF - Accent Blue */
+    --primary-foreground: 0 0% 100%; /* White for primary button text */
+ 
+    --secondary: 178 60% 55.1%; /* #48D1CC - Accent Teal */
+    --secondary-foreground: 0 0% 10%; /* Dark text for secondary button */
+ 
+    --muted: 0 0% 30%; /* #4D4D4D */
+    --muted-foreground: 0 0% 62.7%; /* #A0A0A0 */
+ 
+    --accent: 178 60% 55.1%; /* #48D1CC - Accent Teal (can be primary or secondary accent) */
+    --accent-foreground: 0 0% 10%;
+ 
+    --destructive: 0 84.2% 60.2%; /* Default destructive color */
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 25.1%; /* #404040 */
+    --input: 0 0% 25.1%; /* #404040 */
+    --ring: 202 100% 46.9%; /* #00AEEF - Accent Blue for focus rings */
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Dark mode variables can be the same if :root is already dark-themed 
+       or you can define specific overrides if you have a light mode too */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-text-primary;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom global styles */
+body {
+  @apply bg-background text-text-primary antialiased;
+}
+
+/* Ensure shadcn/ui components pick up the theme correctly */
+.container {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+/* Hero cross-fade between featured items */
+@keyframes fadein {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Subtle dark scrollbar that matches the theme */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3b4256 transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: #3b4256;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #4b5268;
+}
+
+::selection {
+  background: rgba(0, 174, 239, 0.3);
+}
+
