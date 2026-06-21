@@ -70,7 +70,7 @@ const ProviderSelect: React.FC<ProviderSelectProps> = ({
         <Button
           variant="outline"
           disabled={disabled}
-          className={`h-10 w-[200px] justify-between gap-2 border-white/10 bg-white/5 text-sm font-normal text-text-primary hover:bg-white/10 ${
+          className={`h-10 w-full justify-between gap-2 border-white/10 bg-white/5 text-sm font-normal text-text-primary hover:bg-white/10 sm:w-[200px] ${
             highlight && selected.length === 0 ? 'ring-2 ring-accent-teal/60' : ''
           }`}
         >

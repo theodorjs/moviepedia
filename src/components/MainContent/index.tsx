@@ -170,8 +170,8 @@ const MainContent: React.FC<MainContentProps> = ({ filters, onChange }) => {
           <Tv className="h-10 w-10 text-accent-teal" />
           <p className="text-lg font-semibold text-text-primary">Pick your streaming services</p>
           <p className="max-w-md text-sm text-text-secondary">
-            Choose your country and the services you subscribe to (top right) to see which new
-            titles have landed on streaming.
+            Choose your country and the services you subscribe to above to see which new titles
+            have landed on streaming.
           </p>
         </div>
       )}
