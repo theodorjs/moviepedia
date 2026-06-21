@@ -30,7 +30,7 @@ const Header: React.FC<HeaderProps> = ({ query, onSearch }) => {
   return (
     <header className="sticky top-0 z-50 border-b border-white/5 bg-[#13151c]/85 backdrop-blur-md">
       <div className="container mx-auto flex items-center gap-3 py-3">
-        <a href="/" className="flex shrink-0 items-center gap-2.5">
+        <a href={import.meta.env.BASE_URL} className="flex shrink-0 items-center gap-2.5">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-accent-blue to-accent-purple shadow-lg shadow-accent-blue/20">
             <Film className="h-5 w-5 text-white" />
           </span>

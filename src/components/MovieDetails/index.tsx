@@ -26,15 +26,33 @@ const RatingPill: React.FC<{
   label: string;
   value: string;
   className: string;
-}> = ({ label, value, className }) => (
-  <div className={`flex items-center gap-2 rounded-lg px-3 py-1.5 ${className}`}>
-    <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">{label}</span>
-    <span className="text-sm font-bold">{value}</span>
-  </div>
-);
+  href?: string;
+}> = ({ label, value, className, href }) => {
+  const base = `flex items-center gap-2 rounded-lg px-3 py-1.5 ${className}`;
+  const inner = (
+    <>
+      <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">{label}</span>
+      <span className="text-sm font-bold">{value}</span>
+    </>
+  );
+  return href ? (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={`Open on ${label.replace('🍅 ', '')}`}
+      className={`${base} cursor-pointer transition hover:brightness-125 hover:ring-1 hover:ring-white/20`}
+    >
+      {inner}
+    </a>
+  ) : (
+    <div className={base}>{inner}</div>
+  );
+};
 
 const MovieDetails: React.FC<MovieDetailsProps> = ({ isOpen, onClose, media, isMovie, region }) => {
   const [ratings, setRatings] = useState<OmdbRatings | null>(null);
+  const [zoomed, setZoomed] = useState(false);
 
   const imdbId: string | undefined = media?.imdb_id || media?.external_ids?.imdb_id;
 
@@ -79,8 +97,29 @@ const MovieDetails: React.FC<MovieDetailsProps> = ({ isOpen, onClose, media, isM
     media.videos?.results?.find((v: any) => v.site === 'YouTube');
   const trailerUrl = trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null;
 
+  // Each rating pill links out to that service's page for this title. TMDb/IMDb
+  // link by id; RT/Metacritic have no id here, so they open a title search.
+  const tmdbUrl = `https://www.themoviedb.org/${isMovie ? 'movie' : 'tv'}/${media.id}`;
+  const imdbUrl = imdbId ? `https://www.imdb.com/title/${imdbId}` : undefined;
+  const rtUrl = `https://www.rottentomatoes.com/search?search=${encodeURIComponent(title)}`;
+  const metacriticUrl = `https://www.metacritic.com/search/${encodeURIComponent(title)}/`;
+
+  // Where to watch. Movies in many regions only have rent/buy (not flatrate),
+  // so fall back to those so the section still appears for films.
   const watch = media['watch/providers']?.results?.[region];
-  const flatrate: any[] = watch?.flatrate || [];
+  const dedupe = (list: any[]) => {
+    const seen = new Set<number>();
+    return list.filter((p) => (seen.has(p.provider_id) ? false : seen.add(p.provider_id)));
+  };
+  const streamProviders = dedupe([
+    ...(watch?.flatrate || []),
+    ...(watch?.free || []),
+    ...(watch?.ads || []),
+  ]);
+  const rentBuyProviders = dedupe([...(watch?.rent || []), ...(watch?.buy || [])]);
+  const watchProviders = streamProviders.length ? streamProviders : rentBuyProviders;
+  const watchLabel = streamProviders.length ? 'Where to stream' : 'Where to rent or buy';
+  const watchLink: string | undefined = watch?.link;
 
   const metaParts: string[] = [];
   if (year) metaParts.push(String(year));
@@ -89,8 +128,24 @@ const MovieDetails: React.FC<MovieDetailsProps> = ({ isOpen, onClose, media, isM
     metaParts.push(`${media.number_of_seasons} season${media.number_of_seasons > 1 ? 's' : ''}`);
 
   return (
-    <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-3xl gap-0 overflow-y-auto border-white/10 bg-[#15171f] p-0 text-text-primary [&>button]:right-3 [&>button]:top-3 [&>button]:z-20 [&>button]:rounded-full [&>button]:bg-black/60 [&>button]:p-1.5 [&>button]:text-white [&>button]:opacity-100">
+    <Dialog
+      open={isOpen}
+      onOpenChange={(o) => {
+        if (!o) {
+          setZoomed(false);
+          onClose();
+        }
+      }}
+    >
+      <DialogContent
+        onEscapeKeyDown={(e) => {
+          if (zoomed) {
+            e.preventDefault();
+            setZoomed(false);
+          }
+        }}
+        className="max-h-[90vh] max-w-3xl gap-0 overflow-y-auto border-white/10 bg-[#15171f] p-0 text-text-primary [&>button]:right-3 [&>button]:top-3 [&>button]:z-20 [&>button]:rounded-full [&>button]:bg-black/60 [&>button]:p-1.5 [&>button]:text-white [&>button]:opacity-100"
+      >
         {/* Backdrop */}
         <div className="relative h-40 w-full sm:h-56">
           {backdrop ? (
@@ -107,7 +162,9 @@ const MovieDetails: React.FC<MovieDetailsProps> = ({ isOpen, onClose, media, isM
             <img
               src={getPosterUrl(media.poster_path, 'w342')}
               alt={title}
-              className="w-28 shrink-0 rounded-lg shadow-2xl ring-1 ring-white/10 sm:w-36"
+              onClick={() => setZoomed(true)}
+              title="Click to view full size"
+              className="w-28 shrink-0 cursor-zoom-in rounded-lg shadow-2xl ring-1 ring-white/10 transition hover:ring-accent-blue/60 sm:w-36"
             />
             <div className="flex-1">
               <DialogTitle className="text-2xl font-bold leading-tight sm:text-3xl">
@@ -136,6 +193,7 @@ const MovieDetails: React.FC<MovieDetailsProps> = ({ isOpen, onClose, media, isM
               <RatingPill
                 label="TMDb"
                 value={`${tmdbScore}`}
+                href={tmdbUrl}
                 className="bg-accent-blue/15 text-accent-blue"
               />
             )}
@@ -143,6 +201,7 @@ const MovieDetails: React.FC<MovieDetailsProps> = ({ isOpen, onClose, media, isM
               <RatingPill
                 label="IMDb"
                 value={ratings.imdbRating}
+                href={imdbUrl}
                 className="bg-amber-400/15 text-amber-300"
               />
             )}
@@ -150,6 +209,7 @@ const MovieDetails: React.FC<MovieDetailsProps> = ({ isOpen, onClose, media, isM
               <RatingPill
                 label="🍅 RT"
                 value={ratings.rottenTomatoes}
+                href={rtUrl}
                 className="bg-red-500/15 text-red-300"
               />
             )}
@@ -157,6 +217,7 @@ const MovieDetails: React.FC<MovieDetailsProps> = ({ isOpen, onClose, media, isM
               <RatingPill
                 label="Metacritic"
                 value={ratings.metascore}
+                href={metacriticUrl}
                 className="bg-emerald-500/15 text-emerald-300"
               />
             )}
@@ -226,13 +287,13 @@ const MovieDetails: React.FC<MovieDetailsProps> = ({ isOpen, onClose, media, isM
           )}
 
           {/* Where to watch */}
-          {flatrate.length > 0 && (
+          {watchProviders.length > 0 && (
             <div className="mt-6">
               <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-text-primary">
-                <Tv className="h-4 w-4 text-accent-teal" /> Where to stream
+                <Tv className="h-4 w-4 text-accent-teal" /> {watchLabel}
               </h3>
               <div className="flex flex-wrap gap-2">
-                {flatrate.map((p: any) => {
+                {watchProviders.map((p: any) => {
                   const logo = getProviderLogoUrl(p.logo_path, 'w92');
                   return logo ? (
                     <img
@@ -245,6 +306,16 @@ const MovieDetails: React.FC<MovieDetailsProps> = ({ isOpen, onClose, media, isM
                   ) : null;
                 })}
               </div>
+              {watchLink && (
+                <a
+                  href={watchLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-block text-xs text-accent-blue hover:underline"
+                >
+                  View all options on TMDb
+                </a>
+              )}
             </div>
           )}
 
@@ -280,6 +351,22 @@ const MovieDetails: React.FC<MovieDetailsProps> = ({ isOpen, onClose, media, isM
             )}
           </div>
         </div>
+
+        {/* Full-size poster overlay — click anywhere to close */}
+        {zoomed && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-6 sm:p-10"
+            onClick={() => setZoomed(false)}
+            role="button"
+            aria-label="Close full-size poster"
+          >
+            <img
+              src={getPosterUrl(media.poster_path, 'w780')}
+              alt={title}
+              className="max-h-full max-w-full cursor-zoom-out rounded-lg shadow-2xl"
+            />
+          </div>
+        )}
 
         <DialogDescription className="sr-only">
           Details, ratings and cast for {title}.

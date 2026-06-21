@@ -190,7 +190,7 @@ const Navigation: React.FC<NavigationProps> = ({ filters, onChange }) => {
                 onValueChange={(v) => onChange({ genre: v === ALL ? '' : v })}
                 disabled={disableGenre}
               >
-                <SelectTrigger className={`${triggerBase} w-full sm:w-[180px]`}>
+                <SelectTrigger className={`${triggerBase} w-full sm:w-[150px]`}>
                   <SelectValue placeholder="Genre" />
                 </SelectTrigger>
                 <SelectContent className={contentCls}>
@@ -208,7 +208,7 @@ const Navigation: React.FC<NavigationProps> = ({ filters, onChange }) => {
                 onValueChange={(v) => onChange({ timePeriod: v === ALL ? '' : v })}
                 disabled={disableTime}
               >
-                <SelectTrigger className={`${triggerBase} w-full sm:w-[180px]`}>
+                <SelectTrigger className={`${triggerBase} w-full sm:w-[150px]`}>
                   <SelectValue placeholder="Time period" />
                 </SelectTrigger>
                 <SelectContent className={contentCls}>
@@ -226,7 +226,7 @@ const Navigation: React.FC<NavigationProps> = ({ filters, onChange }) => {
                 onValueChange={(v) => onChange({ sortBy: v })}
                 disabled={disableSort}
               >
-                <SelectTrigger className={`${triggerBase} w-full sm:w-[180px]`}>
+                <SelectTrigger className={`${triggerBase} w-full sm:w-[150px]`}>
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent className={contentCls}>
@@ -241,7 +241,7 @@ const Navigation: React.FC<NavigationProps> = ({ filters, onChange }) => {
               <div className="hidden h-6 w-px bg-white/10 sm:mx-1 sm:block" />
 
               <Select value={filters.region} onValueChange={(v) => onChange({ region: v })}>
-                <SelectTrigger className={`${triggerBase} w-full sm:w-[160px]`}>
+                <SelectTrigger className={`${triggerBase} w-full sm:w-[140px]`}>
                   <SelectValue placeholder="Country" />
                 </SelectTrigger>
                 <SelectContent className={contentCls}>

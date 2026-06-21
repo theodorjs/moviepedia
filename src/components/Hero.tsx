@@ -6,7 +6,7 @@ import {
   getBackdropUrl,
 } from '@/services/tmdbService';
 import { ShowType } from '@/lib/constants';
-import { Star, Info, Sparkles } from 'lucide-react';
+import { Star, Info, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface HeroProps {
   showType: ShowType;
@@ -102,6 +102,25 @@ const Hero: React.FC<HeroProps> = ({ showType, onSelect }) => {
             </div>
           </div>
         </div>
+
+        {items.length > 1 && (
+          <>
+            <button
+              onClick={() => setIndex((i) => (i - 1 + items.length) % items.length)}
+              aria-label="Previous featured title"
+              className="absolute left-2 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-black/40 text-white backdrop-blur-sm transition hover:bg-black/60 sm:left-4"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => setIndex((i) => (i + 1) % items.length)}
+              aria-label="Next featured title"
+              className="absolute right-2 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-black/40 text-white backdrop-blur-sm transition hover:bg-black/60 sm:right-4"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </>
+        )}
       </div>
     </section>
   );
