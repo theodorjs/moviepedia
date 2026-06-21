@@ -82,23 +82,52 @@ const Navigation: React.FC<NavigationProps> = ({ filters, onChange }) => {
     (filters.providers.length ? 1 : 0) +
     (filters.sortBy !== 'popularity.desc' ? 1 : 0);
 
+  // Segmented Movies/TV toggle: the active option shows its label, the inactive
+  // one collapses to just its icon on mobile (both labelled from `sm` up).
+  const TypeButton: React.FC<{
+    type: AppFilters['showType'];
+    icon: React.ReactNode;
+    label: string;
+  }> = ({ type, icon, label }) => {
+    const active = filters.showType === type;
+    return (
+      <button
+        onClick={() => onChange({ showType: type })}
+        aria-label={label}
+        aria-pressed={active}
+        className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition sm:px-4 ${
+          active
+            ? 'bg-accent-blue text-white shadow'
+            : 'text-text-secondary hover:text-text-primary'
+        }`}
+      >
+        {icon}
+        <span className={`${active ? 'inline' : 'hidden'} sm:inline`}>{label}</span>
+      </button>
+    );
+  };
+
+  // Mode buttons: icon-only on mobile (flex to fill the row), labelled at `sm`+.
   const ModeButton: React.FC<{
     mode: BrowseMode;
     icon: React.ReactNode;
-    children: React.ReactNode;
-  }> = ({ mode, icon, children }) => {
+    label: string;
+  }> = ({ mode, icon, label }) => {
     const active = filters.mode === mode;
     return (
       <button
         onClick={() => toggleMode(mode)}
-        className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium transition sm:px-4 ${
+        aria-label={label}
+        aria-pressed={active}
+        title={label}
+        className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-sm font-medium transition sm:flex-none sm:px-4 ${
           active
             ? 'bg-gradient-to-r from-accent-blue to-accent-purple text-white shadow-lg shadow-accent-blue/20'
             : 'bg-white/5 text-text-secondary hover:bg-white/10 hover:text-text-primary'
         }`}
       >
         {icon}
-        {children}
+        <span className="hidden sm:inline">{label}</span>
       </button>
     );
   };
@@ -107,59 +136,47 @@ const Navigation: React.FC<NavigationProps> = ({ filters, onChange }) => {
     <nav className="border-b border-white/5 bg-[#13151c]">
       <div className="container mx-auto py-3">
         <Collapsible open={open} onOpenChange={setOpen}>
-          {/* Always-visible bar: media type, modes, and the Filters toggle */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center rounded-full bg-white/5 p-1">
-              <button
-                onClick={() => onChange({ showType: 'movie' })}
-                className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition ${
-                  filters.showType === 'movie'
-                    ? 'bg-accent-blue text-white shadow'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                <Film className="h-4 w-4" /> Movies
-              </button>
-              <button
-                onClick={() => onChange({ showType: 'tv' })}
-                className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition ${
-                  filters.showType === 'tv'
-                    ? 'bg-accent-blue text-white shadow'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                <Tv2 className="h-4 w-4" /> TV Shows
-              </button>
+          {/* Always-visible bar — fills the row on mobile, labelled buttons on sm+ */}
+          <div className="flex w-full items-center gap-1.5 sm:flex-wrap sm:gap-2">
+            <div className="flex shrink-0 items-center rounded-full bg-white/5 p-1">
+              <TypeButton type="movie" icon={<Film className="h-4 w-4 shrink-0" />} label="Movies" />
+              <TypeButton type="tv" icon={<Tv2 className="h-4 w-4 shrink-0" />} label="TV Shows" />
             </div>
 
             {filters.showType === 'movie' && (
               <>
-                <ModeButton mode="now_playing" icon={<Clapperboard className="h-4 w-4" />}>
-                  In Cinemas
-                </ModeButton>
-                <ModeButton mode="upcoming" icon={<CalendarClock className="h-4 w-4" />}>
-                  Upcoming
-                </ModeButton>
+                <ModeButton
+                  mode="now_playing"
+                  icon={<Clapperboard className="h-4 w-4 shrink-0" />}
+                  label="In Cinemas"
+                />
+                <ModeButton
+                  mode="upcoming"
+                  icon={<CalendarClock className="h-4 w-4 shrink-0" />}
+                  label="Upcoming"
+                />
               </>
             )}
-            <ModeButton mode="streaming" icon={<Sparkles className="h-4 w-4" />}>
-              New on Streaming
-            </ModeButton>
+            <ModeButton
+              mode="streaming"
+              icon={<Sparkles className="h-4 w-4 shrink-0" />}
+              label="New on Streaming"
+            />
 
             <CollapsibleTrigger asChild>
               <button
                 aria-label="Toggle filters"
-                className="ml-auto flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-text-primary transition hover:bg-white/10"
+                className="flex flex-1 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-2 text-sm font-medium text-text-primary transition hover:bg-white/10 sm:ml-auto sm:flex-none sm:px-4"
               >
-                <SlidersHorizontal className="h-4 w-4" />
-                <span>Filters</span>
+                <SlidersHorizontal className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Filters</span>
                 {activeCount > 0 && (
                   <span className="grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-accent-blue px-1.5 text-xs font-bold text-white">
                     {activeCount}
                   </span>
                 )}
                 <ChevronDown
-                  className={`h-4 w-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+                  className={`h-4 w-4 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
                 />
               </button>
             </CollapsibleTrigger>
