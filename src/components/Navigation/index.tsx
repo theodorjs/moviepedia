@@ -12,7 +12,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import {
-  Clapperboard,
+  Popcorn,
   CalendarClock,
   Sparkles,
   Film,
@@ -107,12 +107,14 @@ const Navigation: React.FC<NavigationProps> = ({ filters, onChange }) => {
     );
   };
 
-  // Mode buttons: icon-only on mobile (flex to fill the row), labelled at `sm`+.
+  // Mode buttons: icon + label. They flex to fill the row on mobile (short
+  // labels) and are content-sized with full labels from `sm` up.
   const ModeButton: React.FC<{
     mode: BrowseMode;
     icon: React.ReactNode;
     label: string;
-  }> = ({ mode, icon, label }) => {
+    shortLabel?: string;
+  }> = ({ mode, icon, label, shortLabel }) => {
     const active = filters.mode === mode;
     return (
       <button
@@ -120,13 +122,14 @@ const Navigation: React.FC<NavigationProps> = ({ filters, onChange }) => {
         aria-label={label}
         aria-pressed={active}
         title={label}
-        className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-sm font-medium transition sm:flex-none sm:px-4 ${
+        className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-xs font-medium transition sm:flex-none sm:px-4 sm:text-sm ${
           active
             ? 'bg-gradient-to-r from-accent-blue to-accent-purple text-white shadow-lg shadow-accent-blue/20'
             : 'bg-white/5 text-text-secondary hover:bg-white/10 hover:text-text-primary'
         }`}
       >
         {icon}
+        <span className="sm:hidden">{shortLabel ?? label}</span>
         <span className="hidden sm:inline">{label}</span>
       </button>
     );
@@ -136,19 +139,41 @@ const Navigation: React.FC<NavigationProps> = ({ filters, onChange }) => {
     <nav className="border-b border-white/5 bg-[#13151c]">
       <div className="container mx-auto py-3">
         <Collapsible open={open} onOpenChange={setOpen}>
-          {/* Always-visible bar — fills the row on mobile, labelled buttons on sm+ */}
-          <div className="flex w-full items-center gap-1.5 sm:flex-wrap sm:gap-2">
+          {/* Row 1 — media type + filters toggle */}
+          <div className="flex items-center gap-2">
             <div className="flex shrink-0 items-center rounded-full bg-white/5 p-1">
               <TypeButton type="movie" icon={<Film className="h-4 w-4 shrink-0" />} label="Movies" />
               <TypeButton type="tv" icon={<Tv2 className="h-4 w-4 shrink-0" />} label="TV Shows" />
             </div>
 
+            <CollapsibleTrigger asChild>
+              <button
+                aria-label="Toggle filters"
+                className="ml-auto flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-text-primary transition hover:bg-white/10 sm:px-4"
+              >
+                <SlidersHorizontal className="h-4 w-4 shrink-0" />
+                <span>Filters</span>
+                {activeCount > 0 && (
+                  <span className="grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-accent-blue px-1.5 text-xs font-bold text-white">
+                    {activeCount}
+                  </span>
+                )}
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+                />
+              </button>
+            </CollapsibleTrigger>
+          </div>
+
+          {/* Row 2 — view modes */}
+          <div className="mt-2 flex items-center gap-1.5 sm:gap-2">
             {filters.showType === 'movie' && (
               <>
                 <ModeButton
                   mode="now_playing"
-                  icon={<Clapperboard className="h-4 w-4 shrink-0" />}
+                  icon={<Popcorn className="h-4 w-4 shrink-0" />}
                   label="In Cinemas"
+                  shortLabel="Cinemas"
                 />
                 <ModeButton
                   mode="upcoming"
@@ -161,25 +186,8 @@ const Navigation: React.FC<NavigationProps> = ({ filters, onChange }) => {
               mode="streaming"
               icon={<Sparkles className="h-4 w-4 shrink-0" />}
               label="New on Streaming"
+              shortLabel="Streaming"
             />
-
-            <CollapsibleTrigger asChild>
-              <button
-                aria-label="Toggle filters"
-                className="flex flex-1 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-2 text-sm font-medium text-text-primary transition hover:bg-white/10 sm:ml-auto sm:flex-none sm:px-4"
-              >
-                <SlidersHorizontal className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">Filters</span>
-                {activeCount > 0 && (
-                  <span className="grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-accent-blue px-1.5 text-xs font-bold text-white">
-                    {activeCount}
-                  </span>
-                )}
-                <ChevronDown
-                  className={`h-4 w-4 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-                />
-              </button>
-            </CollapsibleTrigger>
           </div>
 
           {/* Collapsible filter criteria */}

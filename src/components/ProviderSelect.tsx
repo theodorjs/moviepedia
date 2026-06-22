@@ -83,6 +83,9 @@ const ProviderSelect: React.FC<ProviderSelectProps> = ({
       </PopoverTrigger>
       <PopoverContent
         align="end"
+        side="bottom"
+        sideOffset={6}
+        avoidCollisions={false}
         className="w-72 border-white/10 bg-[#1b1e29] p-0 text-text-primary"
       >
         <div className="border-b border-white/10 p-2">

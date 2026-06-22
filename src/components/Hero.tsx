@@ -59,68 +59,73 @@ const Hero: React.FC<HeroProps> = ({ showType, onSelect }) => {
         <div className="absolute inset-0 bg-gradient-to-r from-[#0d0f15] via-[#0d0f15]/85 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0d0f15] via-transparent to-transparent" />
 
-        <div className="relative flex h-full max-w-2xl flex-col justify-end gap-3 p-6 sm:p-10">
-          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-accent-purple/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent-purple">
-            <Sparkles className="h-3.5 w-3.5" /> Trending this week
-          </span>
-          <h2 className="text-3xl font-extrabold leading-tight drop-shadow sm:text-5xl">
-            {title}
-          </h2>
-          <div className="flex items-center gap-3 text-sm text-text-secondary">
-            {item.vote_average ? (
-              <span className="flex items-center gap-1 font-semibold text-amber-300">
-                <Star className="h-4 w-4 fill-amber-300" />
-                {item.vote_average.toFixed(1)}
-              </span>
-            ) : null}
-            {year && <span>{year}</span>}
-            <span className="rounded bg-white/10 px-2 py-0.5 text-xs uppercase">
-              {isMovie ? 'Movie' : 'TV'}
+        <div className="relative flex h-full flex-col justify-end gap-4 p-6 sm:p-10">
+          <div className="flex max-w-2xl flex-col gap-3">
+            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-accent-purple/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent-purple">
+              <Sparkles className="h-3.5 w-3.5" /> Trending this week
             </span>
+            <h2 className="text-3xl font-extrabold leading-tight drop-shadow sm:text-5xl">
+              {title}
+            </h2>
+            <div className="flex items-center gap-3 text-sm text-text-secondary">
+              {item.vote_average ? (
+                <span className="flex items-center gap-1 font-semibold text-amber-300">
+                  <Star className="h-4 w-4 fill-amber-300" />
+                  {item.vote_average.toFixed(1)}
+                </span>
+              ) : null}
+              {year && <span>{year}</span>}
+              <span className="rounded bg-white/10 px-2 py-0.5 text-xs uppercase">
+                {isMovie ? 'Movie' : 'TV'}
+              </span>
+            </div>
+            <p className="line-clamp-3 max-w-xl text-sm leading-relaxed text-gray-300">
+              {item.overview}
+            </p>
           </div>
-          <p className="line-clamp-3 max-w-xl text-sm leading-relaxed text-gray-300">
-            {item.overview}
-          </p>
-          <div className="flex items-center gap-4 pt-1">
+
+          {/* Controls: info button + carousel nav, centered on the hero */}
+          <div className="flex items-center justify-center gap-3 pt-1">
             <button
               onClick={() => onSelect(item)}
-              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-gray-200"
+              aria-label="View details"
+              title="View details"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-black shadow-lg transition hover:bg-gray-200"
             >
-              <Info className="h-4 w-4" /> View details
+              <Info className="h-5 w-5" />
             </button>
-            <div className="flex items-center gap-1.5">
-              {items.map((_, i) => (
+            {items.length > 1 && (
+              <div className="flex items-center gap-2">
                 <button
-                  key={i}
-                  onClick={() => setIndex(i)}
-                  aria-label={`Show featured item ${i + 1}`}
-                  className={`h-1.5 rounded-full transition-all ${
-                    i === index ? 'w-6 bg-accent-blue' : 'w-1.5 bg-white/30 hover:bg-white/50'
-                  }`}
-                />
-              ))}
-            </div>
+                  onClick={() => setIndex((i) => (i - 1 + items.length) % items.length)}
+                  aria-label="Previous featured title"
+                  className="grid h-8 w-8 place-items-center rounded-full bg-white/10 text-white backdrop-blur-sm transition hover:bg-white/20"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <div className="flex items-center gap-1.5">
+                  {items.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setIndex(i)}
+                      aria-label={`Show featured item ${i + 1}`}
+                      className={`h-1.5 rounded-full transition-all ${
+                        i === index ? 'w-6 bg-accent-blue' : 'w-1.5 bg-white/30 hover:bg-white/50'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <button
+                  onClick={() => setIndex((i) => (i + 1) % items.length)}
+                  aria-label="Next featured title"
+                  className="grid h-8 w-8 place-items-center rounded-full bg-white/10 text-white backdrop-blur-sm transition hover:bg-white/20"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
-
-        {items.length > 1 && (
-          <>
-            <button
-              onClick={() => setIndex((i) => (i - 1 + items.length) % items.length)}
-              aria-label="Previous featured title"
-              className="absolute left-2 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-black/40 text-white backdrop-blur-sm transition hover:bg-black/60 sm:left-4"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => setIndex((i) => (i + 1) % items.length)}
-              aria-label="Next featured title"
-              className="absolute right-2 top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-black/40 text-white backdrop-blur-sm transition hover:bg-black/60 sm:right-4"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </>
-        )}
       </div>
     </section>
   );
