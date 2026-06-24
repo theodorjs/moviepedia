@@ -13,6 +13,7 @@ import {
   getProviderLogoUrl,
 } from '@/services/tmdbService';
 import { fetchOmdbRatings, OmdbRatings } from '@/services/omdbService';
+import FavoriteButton from '@/components/FavoriteButton';
 
 interface MovieDetailsProps {
   isOpen: boolean;
@@ -74,7 +75,9 @@ const MovieDetails: React.FC<MovieDetailsProps> = ({ isOpen, onClose, media, isM
 
   const title = isMovie ? media.title : media.name;
   const date = isMovie ? media.release_date : media.first_air_date;
-  const year = date ? new Date(date).getFullYear() : null;
+  const fullDate = date
+    ? new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : null;
   const backdrop = getBackdropUrl(media.backdrop_path, 'w1280');
 
   const tmdbScore = media.vote_average ? media.vote_average.toFixed(1) : null;
@@ -122,7 +125,7 @@ const MovieDetails: React.FC<MovieDetailsProps> = ({ isOpen, onClose, media, isM
   const watchLink: string | undefined = watch?.link;
 
   const metaParts: string[] = [];
-  if (year) metaParts.push(String(year));
+  if (fullDate) metaParts.push(fullDate);
   if (runtime) metaParts.push(`${runtime} min`);
   if (!isMovie && media.number_of_seasons)
     metaParts.push(`${media.number_of_seasons} season${media.number_of_seasons > 1 ? 's' : ''}`);
@@ -185,6 +188,13 @@ const MovieDetails: React.FC<MovieDetailsProps> = ({ isOpen, onClose, media, isM
                 ))}
               </div>
             </div>
+
+            <FavoriteButton
+              item={media}
+              isMovie={isMovie}
+              variant="labeled"
+              className="shrink-0 self-start sm:self-end"
+            />
           </div>
 
           {/* Ratings */}

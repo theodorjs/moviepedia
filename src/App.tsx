@@ -4,10 +4,13 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import MainContent from './components/MainContent';
 import Navigation from './components/Navigation';
+import FavoritesPanel from './components/FavoritesPanel';
+import { FavoritesProvider } from './contexts/FavoritesContext';
 import { AppFilters, DEFAULT_FILTERS } from './lib/constants';
 
 function App() {
   const [filters, setFilters] = useState<AppFilters>(DEFAULT_FILTERS);
+  const [favoritesOpen, setFavoritesOpen] = useState(false);
 
   const updateFilters = useCallback((patch: Partial<AppFilters>) => {
     setFilters((prev) => {
@@ -38,12 +41,23 @@ function App() {
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-text-primary">
-      <Header query={filters.query} onSearch={handleSearch} />
-      <Navigation filters={filters} onChange={updateFilters} />
-      <MainContent filters={filters} onChange={updateFilters} />
-      <Footer />
-    </div>
+    <FavoritesProvider>
+      <div className="flex min-h-screen flex-col bg-background text-text-primary">
+        <Header query={filters.query} onSearch={handleSearch} />
+        <Navigation
+          filters={filters}
+          onChange={updateFilters}
+          onOpenFavorites={() => setFavoritesOpen(true)}
+        />
+        <MainContent filters={filters} onChange={updateFilters} />
+        <Footer />
+        <FavoritesPanel
+          open={favoritesOpen}
+          onOpenChange={setFavoritesOpen}
+          region={filters.region}
+        />
+      </div>
+    </FavoritesProvider>
   );
 }
 

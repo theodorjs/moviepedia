@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Movie, TvShow, getPosterUrl } from '@/services/tmdbService';
 import { fetchImdbRatingForMedia, isOmdbConfigured } from '@/services/omdbService';
 import { Star, Info } from 'lucide-react';
+import FavoriteButton from '@/components/FavoriteButton';
 
 interface MediaCardProps {
   item: Movie | TvShow;
@@ -82,11 +83,14 @@ const MediaCard: React.FC<MediaCardProps> = ({ item, onSelect }) => {
         </div>
       </div>
 
-      <div className="p-3">
-        <h3 className="truncate text-sm font-semibold text-text-primary" title={title}>
-          {title}
-        </h3>
-        <p className="text-xs text-text-secondary">{year ?? 'TBA'}</p>
+      <div className="flex items-start justify-between gap-2 p-3">
+        <div className="min-w-0">
+          <h3 className="truncate text-sm font-semibold text-text-primary" title={title}>
+            {title}
+          </h3>
+          <p className="text-xs text-text-secondary">{year ?? 'TBA'}</p>
+        </div>
+        <FavoriteButton item={item} isMovie={isMovie} variant="icon" className="-mr-1 mt-0.5" />
       </div>
     </div>
   );

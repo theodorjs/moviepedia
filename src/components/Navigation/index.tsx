@@ -19,6 +19,7 @@ import {
   Tv2,
   SlidersHorizontal,
   ChevronDown,
+  Heart,
 } from 'lucide-react';
 import { fetchMovieGenres, fetchTvShowGenres, Genre } from '@/services/tmdbService';
 import {
@@ -33,6 +34,7 @@ import ProviderSelect from '@/components/ProviderSelect';
 interface NavigationProps {
   filters: AppFilters;
   onChange: (patch: Partial<AppFilters>) => void;
+  onOpenFavorites: () => void;
 }
 
 const ALL = 'all';
@@ -40,7 +42,7 @@ const triggerBase =
   'h-10 border-white/10 bg-white/5 text-sm text-text-primary hover:bg-white/10 focus:ring-2 focus:ring-accent-blue/40 disabled:opacity-40';
 const contentCls = 'border-white/10 bg-[#1b1e29] text-text-primary';
 
-const Navigation: React.FC<NavigationProps> = ({ filters, onChange }) => {
+const Navigation: React.FC<NavigationProps> = ({ filters, onChange, onOpenFavorites }) => {
   const [genres, setGenres] = useState<Genre[]>([]);
   // Filters panel: open by default on desktop, collapsed on mobile.
   const [open, setOpen] = useState<boolean>(
@@ -146,23 +148,35 @@ const Navigation: React.FC<NavigationProps> = ({ filters, onChange }) => {
               <TypeButton type="tv" icon={<Tv2 className="h-4 w-4 shrink-0" />} label="TV Shows" />
             </div>
 
-            <CollapsibleTrigger asChild>
+            <div className="ml-auto flex shrink-0 items-center gap-2">
               <button
-                aria-label="Toggle filters"
-                className="ml-auto flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-text-primary transition hover:bg-white/10 sm:px-4"
+                onClick={onOpenFavorites}
+                aria-label="Open favorites"
+                title="Favorites"
+                className="flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-text-primary transition hover:bg-white/10 sm:px-4"
               >
-                <SlidersHorizontal className="h-4 w-4 shrink-0" />
-                <span>Filters</span>
-                {activeCount > 0 && (
-                  <span className="grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-accent-blue px-1.5 text-xs font-bold text-white">
-                    {activeCount}
-                  </span>
-                )}
-                <ChevronDown
-                  className={`h-4 w-4 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-                />
+                <Heart className="h-4 w-4 shrink-0 fill-rose-500 text-rose-500" />
+                <span className="hidden sm:inline">Favorites</span>
               </button>
-            </CollapsibleTrigger>
+
+              <CollapsibleTrigger asChild>
+                <button
+                  aria-label="Toggle filters"
+                  className="flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-text-primary transition hover:bg-white/10 sm:px-4"
+                >
+                  <SlidersHorizontal className="h-4 w-4 shrink-0" />
+                  <span className="hidden sm:inline">Filters</span>
+                  {activeCount > 0 && (
+                    <span className="grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-accent-blue px-1.5 text-xs font-bold text-white">
+                      {activeCount}
+                    </span>
+                  )}
+                  <ChevronDown
+                    className={`h-4 w-4 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+                  />
+                </button>
+              </CollapsibleTrigger>
+            </div>
           </div>
 
           {/* Row 2 — view modes */}
