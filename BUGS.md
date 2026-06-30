@@ -17,18 +17,18 @@ Entry template:
 
 ## Open
 
-### TV favorites countdown stuck on "Out"
-- **Where:** `FavoritesPanel` — TV tab
-- **Steps:** Favorite an existing series (e.g. one that aired years ago) and open
-  the favorites panel.
-- **Expected:** Countdown to the next season/episode premiere.
-- **Actual:** Shows "Out", because the stored date is the series' original
-  `first_air_date`, which is in the past.
-- **Notes:** Being addressed via `next_episode_to_air` enrichment (see `TODO.md`).
-  Leave here until verified live; then move to Fixed.
+_Nothing open right now._
 
 ---
 
 ## Fixed
 
-_None yet._
+### TV favorites countdown stuck on "Out"
+- **Where:** `FavoritesPanel` — TV / Upcoming
+- **Steps:** Favorite an existing series (e.g. one that aired years ago) and open
+  the favorites panel.
+- **Expected:** Countdown to the next season/episode premiere.
+- **Actual:** Showed "Out", because the stored date was the series' original
+  `first_air_date`, which is in the past.
+- **Fixed:** Enrich TV favorites with `next_episode_to_air` and count down to
+  that; released series now live under the new Watchlist tab instead.

@@ -12,20 +12,19 @@ Conventions:
 
 ## Now / next
 
-- [~] **TV premiere dates in favorites.** Use TMDb `next_episode_to_air` so the
-  countdown targets the next season/episode instead of the series' original
-  `first_air_date`. Label season premieres vs. regular episodes. _(in progress)_
-- [ ] **Favorites: sort & filter controls.** Let the user sort by soonest
-  premiere / recently added / title, and hide titles that are already out.
 - [ ] **Favorites: "released since you added" badge.** Flag favorites whose
   premiere has passed so the user notices something is ready to watch.
+- [ ] **Watchlist: more "group by" options** (decade, status, watch provider)
+  and remember the user's last sort/group choice in localStorage.
 
 ## Favorites — ideas
 
 - [ ] Persist a `Watched` / `Seen` flag and let the user archive watched titles.
 - [ ] Optional browser notification / calendar (.ics) export for upcoming premieres.
-- [ ] Show the streaming provider logo on the favorite row (where to watch).
+- [ ] Show the streaming provider logo on the favorite/watchlist row (where to watch).
 - [ ] Export / import favorites as JSON (back up across browsers — no backend).
+- [ ] Watchlist: secondary genres (a title shows under each of its genres, not
+  just the primary one) as an optional view.
 
 ## Discovery & data
 
@@ -44,6 +43,12 @@ Conventions:
 
 ## Done
 
+- [x] **Favorites menu reworked into Upcoming + Watchlist** (bottom nav), with
+  Movies/TV split kept in both. Watchlist sorts by release date / rating /
+  runtime / title and groups by genre.
+- [x] **TV premiere dates in favorites.** Countdown targets the next
+  season/episode via TMDb `next_episode_to_air` (falls back to `first_air_date`
+  for new series); labels season premieres vs. regular episodes.
 - [x] Favorites list with premiere countdown (movies + TV tabs, localStorage).
 - [x] PWA / Add to Home Screen support.
 - [x] OMDb ratings (IMDb / RT / Metacritic) with TMDb fallback + caching.

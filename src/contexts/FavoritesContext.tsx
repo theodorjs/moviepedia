@@ -19,6 +19,10 @@ export interface FavoriteItem {
   releaseDate: string; // YYYY-MM-DD, or '' when unknown
   voteAverage?: number;
   addedAt: number;
+  /** TMDb genre ids (list items carry these directly; details via `genres`). */
+  genreIds?: number[];
+  /** Runtime in minutes (movie runtime, or a TV episode's run time). */
+  runtime?: number;
   /** TV only: air date of the next upcoming episode/season (YYYY-MM-DD). */
   nextAirDate?: string;
   /** TV only: season number of `nextAirDate`. */
@@ -27,7 +31,7 @@ export interface FavoriteItem {
   nextEpisodeNumber?: number;
   /** TV only: TMDb status, e.g. "Returning Series", "Ended", "Canceled". */
   status?: string;
-  /** Timestamp of the last successful detail enrichment (TV). */
+  /** Timestamp of the last successful detail enrichment. */
   refreshedAt?: number;
 }
 
@@ -71,6 +75,47 @@ export const tvNextAirPatch = (item: any, isMovie: boolean): Partial<FavoriteIte
   return patch;
 };
 
+/** TMDb genre ids, whether the object is a list item (`genre_ids`) or a full detail (`genres`). */
+const genreIdsOf = (item: any): number[] | undefined => {
+  if (Array.isArray(item.genre_ids)) return item.genre_ids;
+  if (Array.isArray(item.genres)) return item.genres.map((g: any) => g.id);
+  return undefined;
+};
+
+const runtimeOf = (item: any, isMovie: boolean): number | undefined => {
+  const value = isMovie
+    ? item.runtime
+    : Array.isArray(item.episode_run_time)
+    ? item.episode_run_time[0]
+    : undefined;
+  return typeof value === 'number' && value > 0 ? value : undefined;
+};
+
+/**
+ * Patch built from a TMDb object that captures everything the watchlist/upcoming
+ * views need beyond the basics: genre ids, runtime and (TV) next-air/status.
+ *
+ * A *full detail* object carries runtime/genres (movie) or a `status` (TV); when
+ * we detect one we stamp `refreshedAt` so it isn't re-fetched on every open.
+ * A bare *list item* only fills in what it has and stays eligible for enrichment.
+ */
+export const favoriteDetailPatch = (item: any, isMovie: boolean): Partial<FavoriteItem> => {
+  const patch: Partial<FavoriteItem> = { ...tvNextAirPatch(item, isMovie) };
+
+  const genreIds = genreIdsOf(item);
+  if (genreIds) patch.genreIds = genreIds;
+
+  const runtime = runtimeOf(item, isMovie);
+  if (runtime !== undefined) patch.runtime = runtime;
+
+  // Movie details have no `status`, so detect them by their detail-only fields.
+  const isMovieDetail =
+    isMovie && (typeof item.runtime === 'number' || Array.isArray(item.genres));
+  if (isMovieDetail) patch.refreshedAt = Date.now();
+
+  return patch;
+};
+
 /** Build a FavoriteItem from a TMDb movie/tv object (list item or full detail). */
 export const toFavoriteItem = (item: any, isMovie: boolean): FavoriteItem => ({
   id: item.id,
@@ -80,7 +125,7 @@ export const toFavoriteItem = (item: any, isMovie: boolean): FavoriteItem => ({
   releaseDate: (isMovie ? item.release_date : item.first_air_date) ?? '',
   voteAverage: item.vote_average,
   addedAt: Date.now(),
-  ...tvNextAirPatch(item, isMovie),
+  ...favoriteDetailPatch(item, isMovie),
 });
 
 interface FavoritesContextValue {
