@@ -240,10 +240,15 @@ export const fetchUpcomingTv = async (
   const lte = future.toISOString().split('T')[0];
 
   // Brand-new series — their first air date *is* the premiere we count toward.
+  // Sort by popularity, not air date: unaired series all have ~0 votes, so a
+  // vote floor can't be used here, and ordering by date alone floods the top
+  // with obscure regional/web titles that happen to premiere first. Popularity
+  // surfaces the titles people will actually recognize; the merge below then
+  // re-sorts the recognizable picks back into a date-ordered timeline.
   const newSeries = await get<TmdbApiResponse<TvShow>>('/discover/tv', {
     'first_air_date.gte': today,
     'first_air_date.lte': lte,
-    sort_by: 'first_air_date.asc',
+    sort_by: 'popularity.desc',
     'vote_count.gte': 0,
     page,
   });
