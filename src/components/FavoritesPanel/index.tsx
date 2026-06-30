@@ -1,9 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Heart, X, Film, Tv2 } from 'lucide-react';
 import { getPosterUrl, fetchMediaDetails, MediaType } from '@/services/tmdbService';
-import { useFavorites, FavoriteItem } from '@/contexts/FavoritesContext';
+import {
+  useFavorites,
+  FavoriteItem,
+  tvNextAirPatch,
+  FAVORITE_REFRESH_MS,
+} from '@/contexts/FavoritesContext';
 import MovieDetails from '@/components/MovieDetails';
 
 interface FavoritesPanelProps {
@@ -11,6 +16,14 @@ interface FavoritesPanelProps {
   onOpenChange: (open: boolean) => void;
   region: string;
 }
+
+/**
+ * The date the countdown should target. For TV we prefer the next upcoming
+ * episode/season (`nextAirDate`) and fall back to the original `first_air_date`
+ * (handles brand-new, not-yet-aired series). Movies just use their release date.
+ */
+const countdownDate = (fav: FavoriteItem): string =>
+  fav.mediaType === 'tv' && fav.nextAirDate ? fav.nextAirDate : fav.releaseDate;
 
 /** Whole days from today until `dateStr` (negative = already released). */
 const daysUntil = (dateStr: string): number | null => {
@@ -30,10 +43,43 @@ const formatDate = (dateStr: string): string => {
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 };
 
+/**
+ * Human label for the date line. For an upcoming TV season/episode we say what's
+ * coming ("Season 3 premiere" / "Season 3 · Ep 5"); ended series get their
+ * status; everything else just shows the formatted date.
+ */
+const premiereLabel = (fav: FavoriteItem): string => {
+  if (fav.mediaType === 'tv' && fav.nextAirDate) {
+    const season = fav.nextSeasonNumber;
+    const where =
+      fav.nextEpisodeNumber === 1
+        ? season != null
+          ? `Season ${season} premiere`
+          : 'Season premiere'
+        : season != null
+        ? `Season ${season} · Ep ${fav.nextEpisodeNumber}`
+        : 'New episode';
+    return `${where} · ${formatDate(fav.nextAirDate)}`;
+  }
+  // No upcoming TV date: surface an "ended" status rather than a stale date.
+  if (fav.mediaType === 'tv' && !fav.nextAirDate && fav.status) {
+    const ended = fav.status === 'Ended' || fav.status === 'Canceled';
+    if (ended) return `${fav.status} · ${formatDate(fav.releaseDate)}`;
+  }
+  return formatDate(countdownDate(fav));
+};
+
+/** Short badge shown over the poster when there's no live countdown. */
+const outBadge = (fav: FavoriteItem): string => {
+  if (fav.mediaType === 'tv' && fav.status === 'Ended') return 'Ended';
+  if (fav.mediaType === 'tv' && fav.status === 'Canceled') return 'Ended';
+  return 'Out';
+};
+
 /** Sort: soonest upcoming first, then most recently released, unknown dates last. */
 const byPremiere = (a: FavoriteItem, b: FavoriteItem): number => {
-  const da = daysUntil(a.releaseDate);
-  const db = daysUntil(b.releaseDate);
+  const da = daysUntil(countdownDate(a));
+  const db = daysUntil(countdownDate(b));
   const rank = (d: number | null) => (d === null ? Infinity : d >= 0 ? d : 1_000_000 - d);
   return rank(da) - rank(db);
 };
@@ -43,7 +89,7 @@ const FavoriteRow: React.FC<{
   onOpen: (fav: FavoriteItem) => void;
   onRemove: (fav: FavoriteItem) => void;
 }> = ({ fav, onOpen, onRemove }) => {
-  const days = daysUntil(fav.releaseDate);
+  const days = daysUntil(countdownDate(fav));
   const upcoming = days !== null && days >= 0;
   // Shrink the number as it gains digits so it fills roughly the same share of
   // the poster whether it reads "5", "21" or "107".
@@ -88,7 +134,7 @@ const FavoriteRow: React.FC<{
               className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white"
               style={{ textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}
             >
-              {days === null ? 'TBA' : 'Out'}
+              {days === null ? 'TBA' : outBadge(fav)}
             </span>
           )}
         </div>
@@ -106,7 +152,7 @@ const FavoriteRow: React.FC<{
         <p className="truncate text-lg font-bold leading-snug text-text-primary" title={fav.title}>
           {fav.title}
         </p>
-        <p className="mt-0.5 text-sm text-text-secondary">{formatDate(fav.releaseDate)}</p>
+        <p className="mt-0.5 text-sm text-text-secondary">{premiereLabel(fav)}</p>
       </div>
 
       <button
@@ -136,7 +182,7 @@ const EmptyState: React.FC<{ kind: string }> = ({ kind }) => (
 );
 
 const FavoritesPanel: React.FC<FavoritesPanelProps> = ({ open, onOpenChange, region }) => {
-  const { favorites, removeFavorite } = useFavorites();
+  const { favorites, removeFavorite, updateFavorite } = useFavorites();
 
   const [detail, setDetail] = useState<any>(null);
   const [detailIsMovie, setDetailIsMovie] = useState(true);
@@ -150,6 +196,41 @@ const FavoritesPanel: React.FC<FavoritesPanelProps> = ({ open, onOpenChange, reg
     () => favorites.filter((f) => f.mediaType === 'tv').sort(byPremiere),
     [favorites],
   );
+
+  // Keep TV countdowns current: when the panel is open, enrich TV favorites that
+  // have never been refreshed or whose cached "next air"/status info is stale.
+  // `next_episode_to_air` only exists on the detail endpoint, so each needs one
+  // fetch — guarded by a ref so we don't re-request a title already in flight.
+  const inFlight = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!open) return;
+    const now = Date.now();
+    const stale = favorites.filter(
+      (f) =>
+        f.mediaType === 'tv' &&
+        (!f.refreshedAt || now - f.refreshedAt > FAVORITE_REFRESH_MS) &&
+        !inFlight.current.has(`${f.id}`),
+    );
+    if (stale.length === 0) return;
+
+    let cancelled = false;
+    stale.forEach((f) => {
+      inFlight.current.add(`${f.id}`);
+      fetchMediaDetails('tv', f.id)
+        .then((full) => {
+          if (cancelled || !full) return;
+          // Always stamp refreshedAt (via tvNextAirPatch) so an up-to-date show
+          // with no upcoming episode isn't re-fetched on every open.
+          updateFavorite(f.id, 'tv', tvNextAirPatch(full, false));
+        })
+        .finally(() => {
+          inFlight.current.delete(`${f.id}`);
+        });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, favorites, updateFavorite]);
 
   const openDetail = async (fav: FavoriteItem) => {
     const isMovie = fav.mediaType === 'movie';

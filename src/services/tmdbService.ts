@@ -41,6 +41,13 @@ export interface Movie {
   external_ids?: { imdb_id?: string };
 }
 
+export interface TvEpisode {
+  air_date: string | null;
+  season_number: number;
+  episode_number: number;
+  name?: string;
+}
+
 export interface TvShow {
   id: number;
   name: string;
@@ -56,7 +63,37 @@ export interface TvShow {
   number_of_episodes?: number;
   original_language?: string;
   external_ids?: { imdb_id?: string };
+  /** Only present on the TV detail endpoint, not on list items. */
+  status?: string;
+  next_episode_to_air?: TvEpisode | null;
+  last_episode_to_air?: TvEpisode | null;
 }
+
+/**
+ * The next upcoming air date for a TV show, derived from a *detail* object
+ * (`next_episode_to_air` is not present on list items). This drives the
+ * favorites countdown: for a returning series it points at the next season /
+ * episode rather than the long-past `first_air_date`.
+ */
+export interface NextAir {
+  /** YYYY-MM-DD */
+  airDate: string;
+  seasonNumber: number;
+  episodeNumber: number;
+  /** Episode 1 of a season — i.e. a season premiere rather than a mid-run episode. */
+  isSeasonPremiere: boolean;
+}
+
+export const getTvNextAir = (tvDetail: any): NextAir | null => {
+  const next = tvDetail?.next_episode_to_air;
+  if (!next?.air_date) return null;
+  return {
+    airDate: next.air_date,
+    seasonNumber: next.season_number,
+    episodeNumber: next.episode_number,
+    isSeasonPremiere: next.episode_number === 1,
+  };
+};
 
 export interface WatchProvider {
   provider_id: number;
