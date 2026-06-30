@@ -16,11 +16,11 @@ function App() {
     setFilters((prev) => {
       const next: AppFilters = { ...prev, ...patch };
 
-      // Switching between Movies and TV: genre ids differ, and cinema-only
-      // modes don't apply to TV, so reset those.
+      // Switching between Movies and TV: genre ids differ, and "In Cinemas"
+      // (now_playing) is movie-only. "Upcoming" exists for both, so keep it.
       if (patch.showType && patch.showType !== prev.showType) {
         next.genre = '';
-        if (next.mode === 'now_playing' || next.mode === 'upcoming') {
+        if (next.mode === 'now_playing') {
           next.mode = 'browse';
         }
         // Re-map the sort field between movie/tv date fields.

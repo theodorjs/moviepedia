@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { MediaType, getTvNextAir } from '@/services/tmdbService';
+import { MediaType, getTvNextAir, ProviderLite } from '@/services/tmdbService';
 
 /**
  * A favorited title. We store just enough to render the favorites list without
@@ -31,6 +31,8 @@ export interface FavoriteItem {
   nextEpisodeNumber?: number;
   /** TV only: TMDb status, e.g. "Returning Series", "Ended", "Canceled". */
   status?: string;
+  /** Streaming providers per region code, e.g. { NO: [...], SE: [...] }. */
+  watchProviders?: Record<string, ProviderLite[]>;
   /** Timestamp of the last successful detail enrichment. */
   refreshedAt?: number;
 }

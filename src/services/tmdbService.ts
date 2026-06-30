@@ -102,6 +102,12 @@ export interface WatchProvider {
   display_priority?: number;
 }
 
+/** Minimal provider shape we cache on a favorite to show its streaming logo. */
+export interface ProviderLite {
+  name: string;
+  logoPath: string | null;
+}
+
 export interface TmdbApiResponse<T> {
   page: number;
   results: T[];
@@ -214,6 +220,77 @@ export const fetchUpcomingMovies = async (
   });
 };
 
+/**
+ * Upcoming TV: brand-new series premiering soon (a season-1 premiere) plus
+ * returning series whose NEXT season premiere is coming up.
+ *
+ * TMDb's /discover/tv can surface new premieres by `first_air_date`, but it has
+ * no "next season premiere" filter. So for returning shows we take a popular
+ * pool that has episodes airing in the window, then keep the ones whose next
+ * episode is episode 1 of a season (a real season premiere, found via detail).
+ * Returning premieres are only added on page 1 (a small, enriched set); later
+ * pages simply continue the brand-new-series list.
+ */
+export const fetchUpcomingTv = async (
+  page = 1,
+): Promise<TmdbApiResponse<TvShow> | null> => {
+  const today = new Date().toISOString().split('T')[0];
+  const future = new Date();
+  future.setMonth(future.getMonth() + 4);
+  const lte = future.toISOString().split('T')[0];
+
+  // Brand-new series — their first air date *is* the premiere we count toward.
+  const newSeries = await get<TmdbApiResponse<TvShow>>('/discover/tv', {
+    'first_air_date.gte': today,
+    'first_air_date.lte': lte,
+    sort_by: 'first_air_date.asc',
+    'vote_count.gte': 0,
+    page,
+  });
+
+  let premiereShows: TvShow[] = [];
+  if (page === 1) {
+    const pool = await get<TmdbApiResponse<TvShow>>('/discover/tv', {
+      'first_air_date.lte': today,
+      'air_date.gte': today,
+      'air_date.lte': lte,
+      sort_by: 'popularity.desc',
+      'vote_count.gte': 200,
+    });
+    const candidates = (pool?.results ?? []).slice(0, 14);
+    const details = await Promise.all(candidates.map((c) => get<any>(`/tv/${c.id}`)));
+    premiereShows = details
+      .filter((d) => {
+        const n = d?.next_episode_to_air;
+        return (
+          n &&
+          n.episode_number === 1 &&
+          typeof n.air_date === 'string' &&
+          n.air_date >= today &&
+          n.air_date <= lte
+        );
+      })
+      // Show the upcoming season-premiere date on the card, not the (old) first air date.
+      .map((d) => ({ ...d, first_air_date: d.next_episode_to_air.air_date }) as TvShow);
+  }
+
+  if (!newSeries && premiereShows.length === 0) return null;
+
+  const seen = new Set<number>();
+  const merged = [...premiereShows, ...(newSeries?.results ?? [])]
+    .filter((s) => (seen.has(s.id) ? false : seen.add(s.id)))
+    .sort((a, b) =>
+      a.first_air_date < b.first_air_date ? -1 : a.first_air_date > b.first_air_date ? 1 : 0,
+    );
+
+  return {
+    page: newSeries?.page ?? 1,
+    results: merged,
+    total_pages: newSeries?.total_pages ?? 1,
+    total_results: newSeries?.total_results ?? merged.length,
+  };
+};
+
 /* -------------------------------------------------------------------------- */
 /*  Watch providers                                                            */
 /* -------------------------------------------------------------------------- */
@@ -253,6 +330,24 @@ export const fetchMovieDetails = async (movieId: number): Promise<any | null> =>
 
 export const fetchTvShowDetails = async (tvShowId: number): Promise<any | null> => {
   return fetchMediaDetails('tv', tvShowId);
+};
+
+/**
+ * The streaming services a title is available on in `region`, taken from a
+ * detail object's appended `watch/providers`. Flatrate first, then free/ads;
+ * deduped and capped so a row only shows a couple of logos.
+ */
+export const extractWatchProviders = (detail: any, region: string): ProviderLite[] => {
+  const r = detail?.['watch/providers']?.results?.[region];
+  if (!r) return [];
+  const seen = new Set<number>();
+  const out: ProviderLite[] = [];
+  for (const p of [...(r.flatrate ?? []), ...(r.free ?? []), ...(r.ads ?? [])]) {
+    if (seen.has(p.provider_id)) continue;
+    seen.add(p.provider_id);
+    out.push({ name: p.provider_name, logoPath: p.logo_path ?? null });
+  }
+  return out.slice(0, 4);
 };
 
 // IMDb id lookup, used to fetch external (IMDb/RT) ratings. Cached in memory and

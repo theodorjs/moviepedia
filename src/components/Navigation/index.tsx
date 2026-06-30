@@ -182,20 +182,19 @@ const Navigation: React.FC<NavigationProps> = ({ filters, onChange, onOpenFavori
           {/* Row 2 — view modes */}
           <div className="mt-2 flex items-center gap-1.5 sm:gap-2">
             {filters.showType === 'movie' && (
-              <>
-                <ModeButton
-                  mode="now_playing"
-                  icon={<Popcorn className="h-4 w-4 shrink-0" />}
-                  label="In Cinemas"
-                  shortLabel="Cinemas"
-                />
-                <ModeButton
-                  mode="upcoming"
-                  icon={<CalendarClock className="h-4 w-4 shrink-0" />}
-                  label="Upcoming"
-                />
-              </>
+              <ModeButton
+                mode="now_playing"
+                icon={<Popcorn className="h-4 w-4 shrink-0" />}
+                label="In Cinemas"
+                shortLabel="Cinemas"
+              />
             )}
+            {/* Upcoming exists for both: new films, or new series + season premieres. */}
+            <ModeButton
+              mode="upcoming"
+              icon={<CalendarClock className="h-4 w-4 shrink-0" />}
+              label="Upcoming"
+            />
             <ModeButton
               mode="streaming"
               icon={<Sparkles className="h-4 w-4 shrink-0" />}

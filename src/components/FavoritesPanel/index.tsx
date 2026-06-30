@@ -24,10 +24,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   getPosterUrl,
+  getProviderLogoUrl,
+  extractWatchProviders,
   fetchMediaDetails,
   fetchMovieGenres,
   fetchTvShowGenres,
   MediaType,
+  ProviderLite,
 } from '@/services/tmdbService';
 import {
   useFavorites,
@@ -53,6 +56,29 @@ const SORT_LABELS: Record<SortKey, string> = {
   rating: 'Rating',
   runtime: 'Runtime',
   title: 'Title',
+};
+
+/** Persist the watchlist's sort/group choice so it becomes the user's default. */
+const VIEW_PREFS_KEY = 'moviepedia:watchlistView';
+
+interface ViewPrefs {
+  sortKey: SortKey;
+  sortDir: SortDir;
+  groupBy: GroupKey;
+}
+
+const DEFAULT_VIEW_PREFS: ViewPrefs = { sortKey: 'release', sortDir: 'desc', groupBy: 'none' };
+
+const readViewPrefs = (): ViewPrefs => {
+  if (typeof window === 'undefined') return DEFAULT_VIEW_PREFS;
+  try {
+    const raw = window.localStorage.getItem(VIEW_PREFS_KEY);
+    return raw
+      ? { ...DEFAULT_VIEW_PREFS, ...(JSON.parse(raw) as Partial<ViewPrefs>) }
+      : DEFAULT_VIEW_PREFS;
+  } catch {
+    return DEFAULT_VIEW_PREFS;
+  }
 };
 
 /* -------------------------------------------------------------------------- */
@@ -279,15 +305,20 @@ const UpcomingRow: React.FC<{
   );
 };
 
-/** Watchlist row: catalog-style (poster thumb + year · runtime · rating). */
+/** Watchlist row: catalog-style (poster thumb + year · runtime · rating + provider logos). */
 const WatchlistRow: React.FC<{
   fav: FavoriteItem;
   genre: string;
+  providers: ProviderLite[];
   onOpen: (fav: FavoriteItem) => void;
   onRemove: (fav: FavoriteItem) => void;
-}> = ({ fav, genre, onOpen, onRemove }) => {
+}> = ({ fav, genre, providers, onOpen, onRemove }) => {
   const runtime = formatRuntime(fav.runtime);
   const rating = fav.voteAverage ? fav.voteAverage.toFixed(1) : null;
+  const providerLogos = providers
+    .map((p) => ({ name: p.name, url: getProviderLogoUrl(p.logoPath, 'w92') }))
+    .filter((p): p is { name: string; url: string } => p.url !== null)
+    .slice(0, 3);
 
   return (
     <div
@@ -333,6 +364,21 @@ const WatchlistRow: React.FC<{
             </span>
           )}
         </div>
+
+        {providerLogos.length > 0 && (
+          <div className="mt-1.5 flex items-center gap-1">
+            {providerLogos.map((p) => (
+              <img
+                key={p.url}
+                src={p.url}
+                alt={p.name}
+                title={`Streaming on ${p.name}`}
+                loading="lazy"
+                className="h-5 w-5 rounded-[5px] ring-1 ring-white/10"
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <RemoveButton title={fav.title} onRemove={() => onRemove(fav)} />
@@ -361,8 +407,7 @@ const SegmentButton: React.FC<{
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
-  count: number;
-}> = ({ active, onClick, icon, label, count }) => (
+}> = ({ active, onClick, icon, label }) => (
   <button
     type="button"
     onClick={onClick}
@@ -373,7 +418,6 @@ const SegmentButton: React.FC<{
   >
     {icon}
     {label}
-    <span className="ml-0.5 text-xs opacity-80">{count}</span>
   </button>
 );
 
@@ -476,11 +520,21 @@ const FavoritesPanel: React.FC<FavoritesPanelProps> = ({ open, onOpenChange, reg
 
   const [mode, setMode] = useState<Mode>('upcoming');
   const [mediaType, setMediaType] = useState<MediaType>('movie');
-  const [sortKey, setSortKey] = useState<SortKey>('release');
-  const [sortDir, setSortDir] = useState<SortDir>('desc');
-  const [groupBy, setGroupBy] = useState<GroupKey>('none');
+  // Sort/group default to the user's last choice (remembered across visits).
+  const [sortKey, setSortKey] = useState<SortKey>(() => readViewPrefs().sortKey);
+  const [sortDir, setSortDir] = useState<SortDir>(() => readViewPrefs().sortDir);
+  const [groupBy, setGroupBy] = useState<GroupKey>(() => readViewPrefs().groupBy);
 
   const [genreMap, setGenreMap] = useState<Record<number, string>>({});
+
+  // Remember the watchlist's sort/group choice as the new default.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(VIEW_PREFS_KEY, JSON.stringify({ sortKey, sortDir, groupBy }));
+    } catch {
+      /* storage unavailable — ignore */
+    }
+  }, [sortKey, sortDir, groupBy]);
 
   const [detail, setDetail] = useState<any>(null);
   const [detailIsMovie, setDetailIsMovie] = useState(true);
@@ -510,17 +564,6 @@ const FavoritesPanel: React.FC<FavoritesPanelProps> = ({ open, onOpenChange, reg
   };
 
   const ofType = (list: FavoriteItem[]) => list.filter((f) => f.mediaType === mediaType);
-
-  const movieFavorites = useMemo(() => favorites.filter((f) => f.mediaType === 'movie'), [favorites]);
-  const tvFavorites = useMemo(() => favorites.filter((f) => f.mediaType === 'tv'), [favorites]);
-
-  const upcomingCounts = useMemo(
-    () => ({
-      movie: movieFavorites.filter(isUpcoming).length,
-      tv: tvFavorites.filter(isUpcoming).length,
-    }),
-    [movieFavorites, tvFavorites],
-  );
 
   // Active "upcoming" list for the chosen media type.
   const upcomingList = useMemo(
@@ -557,11 +600,12 @@ const FavoritesPanel: React.FC<FavoritesPanelProps> = ({ open, onOpenChange, reg
   useEffect(() => {
     if (!open) return;
     const now = Date.now();
-    const stale = favorites.filter(
-      (f) =>
-        (!f.refreshedAt || now - f.refreshedAt > FAVORITE_REFRESH_MS) &&
-        !inFlight.current.has(`${f.mediaType}:${f.id}`),
-    );
+    const stale = favorites.filter((f) => {
+      const fresh = f.refreshedAt && now - f.refreshedAt <= FAVORITE_REFRESH_MS;
+      // Providers are cached per region — fetch when the current region is missing.
+      const hasRegionProviders = f.watchProviders?.[region] !== undefined;
+      return (!fresh || !hasRegionProviders) && !inFlight.current.has(`${f.mediaType}:${f.id}`);
+    });
     if (stale.length === 0) return;
 
     let cancelled = false;
@@ -571,7 +615,12 @@ const FavoritesPanel: React.FC<FavoritesPanelProps> = ({ open, onOpenChange, reg
       fetchMediaDetails(f.mediaType, f.id)
         .then((full) => {
           if (cancelled || !full) return;
-          updateFavorite(f.id, f.mediaType, favoriteDetailPatch(full, f.mediaType === 'movie'));
+          const patch = favoriteDetailPatch(full, f.mediaType === 'movie');
+          patch.watchProviders = {
+            ...(f.watchProviders ?? {}),
+            [region]: extractWatchProviders(full, region),
+          };
+          updateFavorite(f.id, f.mediaType, patch);
         })
         .finally(() => {
           inFlight.current.delete(key);
@@ -580,7 +629,7 @@ const FavoritesPanel: React.FC<FavoritesPanelProps> = ({ open, onOpenChange, reg
     return () => {
       cancelled = true;
     };
-  }, [open, favorites, updateFavorite]);
+  }, [open, favorites, region, updateFavorite]);
 
   const openDetail = async (fav: FavoriteItem) => {
     const isMovie = fav.mediaType === 'movie';
@@ -644,6 +693,7 @@ const FavoritesPanel: React.FC<FavoritesPanelProps> = ({ open, onOpenChange, reg
                   key={`${f.mediaType}:${f.id}`}
                   fav={f}
                   genre={primaryGenre(f, genreMap)}
+                  providers={f.watchProviders?.[region] ?? []}
                   onOpen={openDetail}
                   onRemove={onRemove}
                 />
@@ -660,6 +710,7 @@ const FavoritesPanel: React.FC<FavoritesPanelProps> = ({ open, onOpenChange, reg
             key={`${f.mediaType}:${f.id}`}
             fav={f}
             genre={primaryGenre(f, genreMap)}
+            providers={f.watchProviders?.[region] ?? []}
             onOpen={openDetail}
             onRemove={onRemove}
           />
@@ -667,9 +718,6 @@ const FavoritesPanel: React.FC<FavoritesPanelProps> = ({ open, onOpenChange, reg
       </div>
     );
   };
-
-  const movieCount = mode === 'upcoming' ? upcomingCounts.movie : movieFavorites.length;
-  const tvCount = mode === 'upcoming' ? upcomingCounts.tv : tvFavorites.length;
 
   return (
     <>
@@ -700,14 +748,12 @@ const FavoritesPanel: React.FC<FavoritesPanelProps> = ({ open, onOpenChange, reg
                 onClick={() => setMediaType('movie')}
                 icon={<Film className="h-4 w-4" />}
                 label="Movies"
-                count={movieCount}
               />
               <SegmentButton
                 active={mediaType === 'tv'}
                 onClick={() => setMediaType('tv')}
                 icon={<Tv2 className="h-4 w-4" />}
                 label="TV"
-                count={tvCount}
               />
             </div>
           </div>

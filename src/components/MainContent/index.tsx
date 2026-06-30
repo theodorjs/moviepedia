@@ -4,6 +4,7 @@ import {
   TvShow,
   discoverMedia,
   discoverNewOnStreaming,
+  fetchUpcomingTv,
   searchMedia,
   fetchMediaDetails,
   TmdbApiResponse,
@@ -43,8 +44,13 @@ const MainContent: React.FC<MainContentProps> = ({ filters, onChange }) => {
       if (mode === 'search') {
         return query.trim() ? await searchMedia(showType, query.trim(), p) : EMPTY;
       }
-      if (mode === 'now_playing' || mode === 'upcoming') {
-        return (await discoverMedia('movie', { category: mode, region, page: p })) as Resp;
+      if (mode === 'now_playing') {
+        return (await discoverMedia('movie', { category: 'now_playing', region, page: p })) as Resp;
+      }
+      if (mode === 'upcoming') {
+        return showType === 'tv'
+          ? ((await fetchUpcomingTv(p)) as Resp)
+          : ((await discoverMedia('movie', { category: 'upcoming', region, page: p })) as Resp);
       }
       if (mode === 'streaming') {
         if (!providerStr) return EMPTY;
@@ -132,7 +138,7 @@ const MainContent: React.FC<MainContentProps> = ({ filters, onChange }) => {
     const t = showType === 'movie' ? 'Movies' : 'TV Shows';
     if (mode === 'search') return query.trim() ? `Results for “${query.trim()}”` : 'Search';
     if (mode === 'now_playing') return 'In Cinemas Now';
-    if (mode === 'upcoming') return 'Upcoming Movies';
+    if (mode === 'upcoming') return showType === 'movie' ? 'Upcoming Movies' : 'Upcoming TV Shows';
     if (mode === 'streaming') return `New on Streaming · ${t}`;
     let base = `Popular ${t}`;
     if (sortBy.startsWith('vote_average')) base = `Top Rated ${t}`;
