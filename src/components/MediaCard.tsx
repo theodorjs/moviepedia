@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Movie, TvShow, getPosterUrl } from '@/services/tmdbService';
-import { fetchImdbRatingForMedia, isOmdbConfigured } from '@/services/omdbService';
+import { fetchOmdbRatingsForMedia, isOmdbConfigured, OmdbRatings } from '@/services/omdbService';
 import { Star, Info } from 'lucide-react';
 import FavoriteButton from '@/components/FavoriteButton';
 
@@ -15,24 +15,42 @@ const MediaCard: React.FC<MediaCardProps> = ({ item, onSelect }) => {
   const date = isMovie ? (item as Movie).release_date : (item as TvShow).first_air_date;
   const year = date ? new Date(date).getFullYear() : null;
 
-  // Prefer the IMDb rating (via OMDb); fall back to the TMDb score if IMDb is
-  // unavailable (no key, no match, or OMDb quota reached). Same star + styling.
+  // Rating shown on the poster, picked by source priority IMDb → Rotten Tomatoes
+  // → TMDb. The colour tells the source apart: amber = IMDb, red = Rotten
+  // Tomatoes, blue = TMDb. TMDb stays the final fallback (no key, no match, or
+  // OMDb quota reached) so every card still shows a score.
   const tmdbRating = item.vote_average ? item.vote_average.toFixed(1) : null;
-  const [imdbRating, setImdbRating] = useState<string | null>(null);
+  const [omdb, setOmdb] = useState<OmdbRatings | null>(null);
 
   useEffect(() => {
     if (!isOmdbConfigured()) return;
     let active = true;
-    fetchImdbRatingForMedia(isMovie ? 'movie' : 'tv', item.id).then((r) => {
-      if (active && r) setImdbRating(r);
+    fetchOmdbRatingsForMedia(isMovie ? 'movie' : 'tv', item.id).then((r) => {
+      if (active && r) setOmdb(r);
     });
     return () => {
       active = false;
     };
   }, [item.id, isMovie]);
 
-  const rating = imdbRating ?? tmdbRating;
-  const ratingTitle = imdbRating ? 'IMDb rating' : 'TMDb rating';
+  const RATING_STYLES = {
+    imdb: { text: 'text-amber-300', fill: 'fill-amber-300', label: 'IMDb rating' },
+    rt: { text: 'text-red-500', fill: 'fill-red-500', label: 'Rotten Tomatoes' },
+    tmdb: { text: 'text-accent-blue', fill: 'fill-accent-blue', label: 'TMDb rating' },
+  } as const;
+
+  let rating: string | null = null;
+  let ratingStyle: (typeof RATING_STYLES)[keyof typeof RATING_STYLES] | null = null;
+  if (omdb?.imdbRating) {
+    rating = omdb.imdbRating;
+    ratingStyle = RATING_STYLES.imdb;
+  } else if (omdb?.rottenTomatoes) {
+    rating = omdb.rottenTomatoes;
+    ratingStyle = RATING_STYLES.rt;
+  } else if (tmdbRating) {
+    rating = tmdbRating;
+    ratingStyle = RATING_STYLES.tmdb;
+  }
 
   const open = () => onSelect(item);
 
@@ -61,12 +79,12 @@ const MediaCard: React.FC<MediaCardProps> = ({ item, onSelect }) => {
           }}
         />
 
-        {rating && (
+        {rating && ratingStyle && (
           <div
-            title={ratingTitle}
-            className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/70 px-2 py-0.5 text-xs font-semibold text-amber-300 backdrop-blur-sm"
+            title={ratingStyle.label}
+            className={`absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/70 px-2 py-0.5 text-xs font-semibold backdrop-blur-sm ${ratingStyle.text}`}
           >
-            <Star className="h-3 w-3 fill-amber-300" />
+            <Star className={`h-3 w-3 ${ratingStyle.fill}`} />
             {rating}
           </div>
         )}

@@ -100,3 +100,14 @@ export const fetchImdbRatingForMedia = async (
   const ratings = await fetchOmdbRatings(imdbId);
   return ratings?.imdbRating ?? null;
 };
+
+/** Convenience: resolve a TMDb item straight to its full OMDb ratings set. */
+export const fetchOmdbRatingsForMedia = async (
+  mediaType: MediaType,
+  tmdbId: number,
+): Promise<OmdbRatings | null> => {
+  if (!OMDB_KEY) return null;
+  const imdbId = await fetchImdbId(mediaType, tmdbId);
+  if (!imdbId) return null;
+  return fetchOmdbRatings(imdbId);
+};
